@@ -61,6 +61,11 @@ with st.sidebar:
     st.header("HHI Team | Commercial Real Estate")
     st.markdown("---")
 
+    # Industrial Mode Toggle
+    industrial_mode = st.toggle("🏭 Industrial Mode", value=False,
+                                help="Switch to industrial/warehouse analysis with machinery costs and operational downtime")
+
+    st.markdown("---")
     st.subheader("⚙️ Lease Parameters")
     lease_term = st.number_input("Lease Term (Years)", min_value=1, max_value=20, value=10, step=1,
                                  help="Length of the lease term for analysis")
@@ -88,30 +93,42 @@ with st.sidebar:
     moving_costs_psf = st.number_input("Moving/FF&E Costs ($/PSF)", min_value=0.0, value=25.0, step=1.0)
 
     st.markdown("---")
-    st.subheader("⚡ HHI Team Friction")
-    productivity_loss_hours = st.slider("Productivity Loss per Employee (Hours)",
-                                       min_value=0, max_value=80, value=8, step=1)
-    headcount = st.number_input("Headcount", min_value=1, value=50, step=1)
-    avg_salary = st.number_input("Average Salary ($)", min_value=0, value=150000, step=5000)
+
+    # Conditional inputs based on mode
+    if not industrial_mode:
+        st.subheader("⚡ HHI Team Friction (Office)")
+        productivity_loss_hours = st.slider("Productivity Loss per Employee (Hours)",
+                                           min_value=0, max_value=80, value=8, step=1)
+        headcount = st.number_input("Headcount", min_value=1, value=50, step=1)
+        avg_salary = st.number_input("Average Salary ($)", min_value=0, value=150000, step=5000)
+    else:
+        st.subheader("🏭 HHI Team Friction (Industrial)")
+        daily_revenue_loss = st.number_input("Daily Revenue/Production Value ($)",
+                                             min_value=0, value=50000, step=5000,
+                                             help="Average daily revenue or production value")
+        machinery_rigging = st.number_input("Machinery Rigging & Electrical ($/SF)",
+                                           min_value=0.0, value=15.0, step=1.0,
+                                           help="One-time capital expense for moving machinery and electrical infrastructure")
 
     st.markdown("---")
 
-    # Strategic Drivers
-    with st.expander("🎯 HHI Team Strategic Drivers", expanded=False):
-        st.markdown("**Driver A: Workforce Stability Index**")
-        st.markdown("_One-time turnover risk from relocation_")
-        attrition_rate = st.slider("Estimated Attrition Rate (%)", min_value=0.0, max_value=50.0, value=10.0, step=1.0)
+    # Strategic Drivers (Office Mode Only)
+    if not industrial_mode:
+        with st.expander("🎯 HHI Team Strategic Drivers", expanded=False):
+            st.markdown("**Driver A: Workforce Stability Index**")
+            st.markdown("_One-time turnover risk from relocation_")
+            attrition_rate = st.slider("Estimated Attrition Rate (%)", min_value=0.0, max_value=50.0, value=10.0, step=1.0)
 
-        st.markdown("**Driver B: Recruiting Velocity**")
-        st.markdown("_Annual benefit from improved hiring speed_")
-        open_roles_per_year = st.number_input("Open Roles Per Year", min_value=0, value=5, step=1)
-        revenue_per_employee = st.number_input("Revenue Per Employee ($)", min_value=0, value=500000, step=10000)
-        hiring_speed_boost = st.slider("Hiring Speed Boost (Days Faster)", min_value=0, max_value=90, value=30, step=5)
+            st.markdown("**Driver B: Recruiting Velocity**")
+            st.markdown("_Annual benefit from improved hiring speed_")
+            open_roles_per_year = st.number_input("Open Roles Per Year", min_value=0, value=5, step=1)
+            revenue_per_employee = st.number_input("Revenue Per Employee ($)", min_value=0, value=500000, step=10000)
+            hiring_speed_boost = st.slider("Hiring Speed Boost (Days Faster)", min_value=0, max_value=90, value=30, step=5)
 
-        st.markdown("**Driver C: Commute Dividend**")
-        st.markdown("_Annual value of recaptured commute time_")
-        commute_time_saved = st.slider("Avg Commute Time Saved (Minutes/Day)", min_value=0, max_value=120, value=20, step=5)
-        st.caption("💡 Hourly wage calculated as: Annual Salary ÷ 2,080 hours")
+            st.markdown("**Driver C: Commute Dividend**")
+            st.markdown("_Annual value of recaptured commute time_")
+            commute_time_saved = st.slider("Avg Commute Time Saved (Minutes/Day)", min_value=0, max_value=120, value=20, step=5)
+            st.caption("💡 Hourly wage calculated as: Annual Salary ÷ 2,080 hours")
 
 # Calculate Strategic Drivers
 def calculate_strategic_drivers():
@@ -133,8 +150,16 @@ def calculate_strategic_drivers():
 # Calculate friction cost
 def calculate_friction_cost():
     """Calculate one-time HHI Team Friction penalty"""
-    hourly_cost = avg_salary / 2080
-    friction = headcount * hourly_cost * productivity_loss_hours
+    if not industrial_mode:
+        # Office mode: Productivity loss
+        hourly_cost = avg_salary / 2080
+        friction = headcount * hourly_cost * productivity_loss_hours
+    else:
+        # Industrial mode: 2 weeks operational downtime + machinery costs
+        downtime_cost = daily_revenue_loss * 14
+        rigging_cost = machinery_rigging * target_sf
+        friction = downtime_cost + rigging_cost
+
     return friction
 
 # Calculate annual costs
@@ -165,7 +190,11 @@ def calculate_npv(cash_flows, discount_rate):
     return npv
 
 # Perform calculations
-turnover_risk, recruiting_benefit, commute_benefit = calculate_strategic_drivers()
+if not industrial_mode:
+    turnover_risk, recruiting_benefit, commute_benefit = calculate_strategic_drivers()
+else:
+    # Industrial mode: No strategic drivers
+    turnover_risk, recruiting_benefit, commute_benefit = 0, 0, 0
 
 # Base costs
 renewal_costs = calculate_annual_costs(renewal_base_rent, renewal_free_rent, renewal_ti, current_sf, lease_term)
@@ -456,3 +485,4 @@ st.markdown("""
     </p>
 </div>
 """, unsafe_allow_html=True)
+
