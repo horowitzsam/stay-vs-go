@@ -390,7 +390,7 @@ fig_year1.update_layout(
     )
 )
 
-fig_year1.update_yaxis(showgrid=True, gridwidth=1, gridcolor='#e5e5e5')
+fig_year1.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#e5e5e5')
 
 st.plotly_chart(fig_year1, use_container_width=True)
 
