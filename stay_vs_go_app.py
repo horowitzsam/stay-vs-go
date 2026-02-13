@@ -313,8 +313,8 @@ fig_cumulative.update_layout(
     )
 )
 
-fig_cumulative.update_xaxis(showgrid=True, gridwidth=1, gridcolor='#e5e5e5')
-fig_cumulative.update_yaxis(showgrid=True, gridwidth=1, gridcolor='#e5e5e5')
+fig_cumulative.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#e5e5e5')
+fig_cumulative.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#e5e5e5')
 
 st.plotly_chart(fig_cumulative, use_container_width=True)
 
