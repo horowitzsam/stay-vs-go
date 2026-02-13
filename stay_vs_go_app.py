@@ -1,3 +1,4 @@
+ · PY
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
@@ -249,8 +250,7 @@ st.markdown("---")
 st.subheader("💰 Executive Summary: Annual Annuity Waterfall")
 
 avg_stay_cost = sum(renewal_costs) / lease_term
-avg_go_cost_base = sum([new_base_rent * target_sf * 12 * ((1 + escalation_rate/100)**i) for i in range(lease_term)]) / lease_term
-avg_go_cost_base -= (new_ti * target_sf)
+avg_go_cost = sum(relocation_costs) / lease_term
 
 waterfall_values = [
     avg_stay_cost,
@@ -440,5 +440,20 @@ st.markdown("""
 <div style='text-align: center; color: #666; padding: 2rem;'>
     <p><strong>HHI Strategic Decision Engine</strong> | Commercial Real Estate Decision Intelligence</p>
     <p style='font-size: 0.9em;'>Quantifying the strategic and operational impact of real estate decisions</p>
+</div>
+""", unsafe_allow_html=True)
+
+# Disclaimer
+st.markdown("---")
+st.markdown("""
+<div style='text-align: center; color: #888; padding: 1rem; font-size: 0.85em; max-width: 800px; margin: 0 auto;'>
+    <p><strong>⚠️ Disclaimer</strong></p>
+    <p style='line-height: 1.6;'>
+    This tool is provided for informational and analytical purposes only. The projections, calculations, and insights
+    generated are based on user-provided inputs and assumptions, and should be used as guidance in the decision-making
+    process. This analysis does not constitute professional real estate, financial, legal, or tax advice.
+    Users should consult with qualified professionals and conduct their own due diligence before making any
+    real estate decisions. HHI and the tool creators assume no liability for decisions made based on this analysis.
+    </p>
 </div>
 """, unsafe_allow_html=True)
