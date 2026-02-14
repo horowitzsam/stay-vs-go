@@ -98,16 +98,16 @@ with st.sidebar:
     if not industrial_mode:
         st.subheader("⚡ HHI Team Friction (Office)")
         productivity_loss_hours = st.slider("Productivity Loss per Employee (Hours)",
-                                           min_value=0, max_value=80, value=8, step=1)
-        headcount = st.number_input("Headcount", min_value=1, value=50, step=1)
-        avg_salary = st.number_input("Average Salary ($)", min_value=0, value=150000, step=5000)
+                                           min_value=0, max_value=80, value=0, step=1)
+        headcount = st.number_input("Headcount", min_value=1, value=1, step=1)
+        avg_salary = st.number_input("Average Salary ($)", min_value=0, value=0, step=5000)
     else:
         st.subheader("🏭 HHI Team Friction (Industrial)")
         daily_revenue_loss = st.number_input("Daily Revenue/Production Value ($)",
-                                             min_value=0, value=50000, step=5000,
+                                             min_value=0, value=0, step=5000,
                                              help="Average daily revenue or production value")
         machinery_rigging = st.number_input("Machinery Rigging & Electrical ($/SF)",
-                                           min_value=0.0, value=15.0, step=1.0,
+                                           min_value=0.0, value=0.0, step=1.0,
                                            help="One-time capital expense for moving machinery and electrical infrastructure")
 
     st.markdown("---")
@@ -225,17 +225,40 @@ npv_savings = renewal_npv - relocation_npv
 renewal_cumulative = np.cumsum(renewal_costs)
 relocation_cumulative = np.cumsum(relocation_costs)
 
-# Breakeven
+# Breakeven - Fixed Logic
 breakeven_month = None
 for year in range(lease_term):
     if relocation_cumulative[year] < renewal_cumulative[year]:
+        # Found the year where Go becomes cheaper than Stay
         if year == 0:
-            breakeven_month = None
+            # Go is cheaper immediately
+            breakeven_month = 0
         else:
-            if (renewal_costs[year] - relocation_costs[year]) != 0:
-                months_into_year = 12 * (renewal_cumulative[year-1] - relocation_cumulative[year-1]) / (renewal_costs[year] - relocation_costs[year])
-                breakeven_month = year * 12 + months_into_year
+            # Interpolate to find the exact month within the year
+            # At end of year-1: Go was more expensive
+            # At end of year: Go is less expensive
+            # Find the crossover point
+            gap_at_start = renewal_cumulative[year-1] - relocation_cumulative[year-1]  # Negative (Go is losing)
+            gap_at_end = renewal_cumulative[year] - relocation_cumulative[year]  # Positive (Go is winning)
+
+            # How much did Go gain during this year?
+            go_gain = renewal_costs[year] - relocation_costs[year]
+
+            if go_gain > 0:
+                # Calculate what fraction of the year it took to close the gap
+                fraction_of_year = abs(gap_at_start) / go_gain
+                breakeven_month = (year - 1) * 12 + (fraction_of_year * 12)
+            else:
+                breakeven_month = year * 12
         break
+
+# If we never found a breakeven, check if Go ever becomes cheaper
+if breakeven_month is None and relocation_cumulative[-1] >= renewal_cumulative[-1]:
+    # Go never becomes cheaper
+    breakeven_display = "Does Not Breakeven"
+else:
+    if breakeven_month is None:
+        breakeven_display = "Does Not Breakeven"
 
 # Key Insights - Option C
 st.subheader("💡 Executive Summary")
@@ -250,12 +273,13 @@ with col1:
     )
 
 with col2:
-    if breakeven_month:
-        years = int(breakeven_month // 12)
-        months = int(breakeven_month % 12)
-        breakeven_display = f"{years}yr {months}mo"
-    else:
-        breakeven_display = "Never" if npv_savings < 0 else "Immediate"
+    if breakeven_month is not None and breakeven_display != "Does Not Breakeven":
+        if breakeven_month == 0:
+            breakeven_display = "Immediate"
+        else:
+            years = int(breakeven_month // 12)
+            months = int(breakeven_month % 12)
+            breakeven_display = f"{years}yr {months}mo"
 
     st.metric(
         label="Breakeven Point",
@@ -274,25 +298,49 @@ with col3:
 
 st.markdown("---")
 
-# Waterfall Chart - Annual Annuity
+# Waterfall Chart - Annual Annuity (Fixed to show true average annual costs)
 st.subheader("💰 Executive Summary: Annual Annuity Waterfall")
 
+# Calculate average annual costs (already includes all strategic drivers and costs)
 avg_stay_cost = sum(renewal_costs) / lease_term
 avg_go_cost = sum(relocation_costs) / lease_term
 
+# Calculate average annual base rent for each scenario (with escalation)
+stay_base_rent_total = 0
+go_base_rent_total = 0
+for year in range(lease_term):
+    # Stay scenario base rent with escalation
+    stay_rent_this_year = renewal_base_rent * current_sf * 12 * ((1 + escalation_rate/100) ** year)
+    stay_base_rent_total += stay_rent_this_year
+
+    # Go scenario base rent with escalation
+    go_rent_this_year = new_base_rent * target_sf * 12 * ((1 + escalation_rate/100) ** year)
+    go_base_rent_total += go_rent_this_year
+
+avg_stay_base_rent = stay_base_rent_total / lease_term
+avg_go_base_rent = go_base_rent_total / lease_term
+avg_rent_savings = avg_stay_base_rent - avg_go_base_rent
+
+# Calculate average annual TI benefit
+avg_ti_stay = renewal_ti * current_sf
+avg_ti_go = new_ti * target_sf
+avg_ti_benefit = avg_ti_go - avg_ti_stay
+
 waterfall_values = [
     avg_stay_cost,
-    -(new_base_rent - renewal_base_rent) * ((current_sf + target_sf) / 2) * 12,
-    -recruiting_benefit,
-    -commute_benefit,
-    (friction_cost + moving_cost + turnover_risk) / lease_term,
-    opportunity_cost_annual,
+    -avg_rent_savings,  # Rent savings (annual average with escalation)
+    -avg_ti_benefit,    # Additional TI benefit (annual average)
+    -recruiting_benefit,  # Recruiting velocity (annual)
+    -commute_benefit,     # Commute dividend (annual)
+    (friction_cost + moving_cost + turnover_risk) / lease_term,  # Amortized one-time costs
+    opportunity_cost_annual,  # Opportunity cost (annual)
     avg_go_cost
 ]
 
 waterfall_labels = [
     "Stay Cost",
     "Rent Savings",
+    "TI Benefit",
     "Recruiting Velocity",
     "Commute Dividend",
     "Amortized Friction",
@@ -485,4 +533,3 @@ st.markdown("""
     </p>
 </div>
 """, unsafe_allow_html=True)
-
