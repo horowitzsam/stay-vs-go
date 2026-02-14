@@ -117,17 +117,17 @@ with st.sidebar:
         with st.expander("🎯 HHI Team Strategic Drivers", expanded=False):
             st.markdown("**Driver A: Workforce Stability Index**")
             st.markdown("_One-time turnover risk from relocation_")
-            attrition_rate = st.slider("Estimated Attrition Rate (%)", min_value=0.0, max_value=50.0, value=10.0, step=1.0)
+            attrition_rate = st.slider("Estimated Attrition Rate (%)", min_value=0.0, max_value=50.0, value=0.0, step=1.0)
 
             st.markdown("**Driver B: Recruiting Velocity**")
             st.markdown("_Annual benefit from improved hiring speed_")
-            open_roles_per_year = st.number_input("Open Roles Per Year", min_value=0, value=5, step=1)
-            revenue_per_employee = st.number_input("Revenue Per Employee ($)", min_value=0, value=500000, step=10000)
-            hiring_speed_boost = st.slider("Hiring Speed Boost (Days Faster)", min_value=0, max_value=90, value=30, step=5)
+            open_roles_per_year = st.number_input("Open Roles Per Year", min_value=0, value=0, step=1)
+            revenue_per_employee = st.number_input("Revenue Per Employee ($)", min_value=0, value=0, step=10000)
+            hiring_speed_boost = st.slider("Hiring Speed Boost (Days Faster)", min_value=0, max_value=90, value=0, step=5)
 
             st.markdown("**Driver C: Commute Dividend**")
             st.markdown("_Annual value of recaptured commute time_")
-            commute_time_saved = st.slider("Avg Commute Time Saved (Minutes/Day)", min_value=0, max_value=120, value=20, step=5)
+            commute_time_saved = st.slider("Avg Commute Time Saved (Minutes/Day)", min_value=0, max_value=120, value=0, step=5)
             st.caption("💡 Hourly wage calculated as: Annual Salary ÷ 2,080 hours")
 
 # Calculate Strategic Drivers
