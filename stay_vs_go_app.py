@@ -227,12 +227,15 @@ relocation_cumulative = np.cumsum(relocation_costs)
 
 # Breakeven - Fixed Logic
 breakeven_month = None
+breakeven_display = "Does Not Breakeven"  # Default
+
 for year in range(lease_term):
     if relocation_cumulative[year] < renewal_cumulative[year]:
         # Found the year where Go becomes cheaper than Stay
         if year == 0:
             # Go is cheaper immediately
             breakeven_month = 0
+            breakeven_display = "Immediate"
         else:
             # Interpolate to find the exact month within the year
             # At end of year-1: Go was more expensive
@@ -248,17 +251,16 @@ for year in range(lease_term):
                 # Calculate what fraction of the year it took to close the gap
                 fraction_of_year = abs(gap_at_start) / go_gain
                 breakeven_month = (year - 1) * 12 + (fraction_of_year * 12)
+                # Format the display
+                years = int(breakeven_month // 12)
+                months = int(breakeven_month % 12)
+                breakeven_display = f"{years}yr {months}mo"
             else:
                 breakeven_month = year * 12
+                years = int(breakeven_month // 12)
+                months = int(breakeven_month % 12)
+                breakeven_display = f"{years}yr {months}mo"
         break
-
-# If we never found a breakeven, check if Go ever becomes cheaper
-if breakeven_month is None and relocation_cumulative[-1] >= renewal_cumulative[-1]:
-    # Go never becomes cheaper
-    breakeven_display = "Does Not Breakeven"
-else:
-    if breakeven_month is None:
-        breakeven_display = "Does Not Breakeven"
 
 # Key Insights - Option C
 st.subheader("💡 Executive Summary")
@@ -273,14 +275,6 @@ with col1:
     )
 
 with col2:
-    if breakeven_month is not None and breakeven_display != "Does Not Breakeven":
-        if breakeven_month == 0:
-            breakeven_display = "Immediate"
-        else:
-            years = int(breakeven_month // 12)
-            months = int(breakeven_month % 12)
-            breakeven_display = f"{years}yr {months}mo"
-
     st.metric(
         label="Breakeven Point",
         value=breakeven_display,
