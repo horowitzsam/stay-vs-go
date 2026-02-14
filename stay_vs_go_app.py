@@ -94,7 +94,7 @@ with st.sidebar:
     new_base_rent = st.number_input("New Base Rent ($/PSF)", min_value=0.0, value=30.0, step=0.50)
     new_free_rent = st.number_input("New Free Rent (Months)", min_value=0, max_value=24, value=6)
     new_ti = st.number_input("New TI Allowance ($/PSF)", min_value=0.0, value=60.0, step=1.0)
-    moving_costs_psf = st.number_input("Moving/FF&E Costs ($/PSF)", min_value=0.0, value=25.0, step=1.0)
+    moving_costs_psf = st.number_input("Construction/Moving/FF&E Costs ($/PSF)", min_value=0.0, value=25.0, step=1.0)
 
     st.markdown("---")
 
