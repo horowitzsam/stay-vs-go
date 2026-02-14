@@ -164,19 +164,29 @@ def calculate_friction_cost():
 
 # Calculate annual costs
 def calculate_annual_costs(base_rent, free_months, ti_allowance, sq_ft, term_years):
-    """Calculate annual occupancy costs with escalation"""
+    """
+    Calculate annual occupancy costs with escalation.
+    FIX 2: base_rent is $/PSF/year (annual), not monthly - removed * 12
+    FIX 3: Free rent can spill into Year 2 if > 12 months
+    """
     annual_costs = []
     current_rent = base_rent
-    ti_per_year = ti_allowance
 
     for year in range(1, term_years + 1):
         if year == 1:
-            effective_months = 12 - free_months
-            year_cost = (current_rent * effective_months * sq_ft) - (ti_per_year * sq_ft)
+            # Year 1: Prorate for free months + TI benefit (one-time)
+            occupied_months_yr1 = max(0, 12 - free_months)
+            year_cost = (current_rent * sq_ft) * (occupied_months_yr1 / 12) - (ti_allowance * sq_ft)
+        elif year == 2 and free_months > 12:
+            # Year 2: Handle free rent spillover
+            spillover_months = free_months - 12
+            occupied_months_yr2 = max(0, 12 - spillover_months)
+            year_cost = (current_rent * sq_ft) * (occupied_months_yr2 / 12)
         else:
-            year_cost = current_rent * 12 * sq_ft - (ti_per_year * sq_ft)
+            # Years 2+ (or 3+ if spillover): Full year rent, no TI
+            year_cost = current_rent * sq_ft
 
-        annual_costs.append(max(0, year_cost))
+        annual_costs.append(year_cost)
         current_rent *= (1 + escalation_rate / 100)
 
     return annual_costs
@@ -200,21 +210,18 @@ else:
 renewal_costs = calculate_annual_costs(renewal_base_rent, renewal_free_rent, renewal_ti, current_sf, lease_term)
 relocation_costs = calculate_annual_costs(new_base_rent, new_free_rent, new_ti, target_sf, lease_term)
 
-# Apply Strategic Drivers to Stay scenario
-# Stay: Gets turnover risk (one-time Year 1) + opportunity cost from poor recruiting/commute (annual)
-opportunity_cost_annual = recruiting_benefit + commute_benefit
-renewal_costs[0] += turnover_risk
-for i in range(len(renewal_costs)):
-    renewal_costs[i] += opportunity_cost_annual
+# FIX 2: Strategic Drivers - Stay is pure baseline, Go gets benefits
+# Stay: Pure baseline + turnover risk (Year 1 only)
+renewal_costs[0] += turnover_risk  # Both scenarios get turnover penalty
 
-# Apply Strategic Drivers and friction to Go scenario
+# Go: Gets friction/moving/turnover (Year 1) - strategic benefits (annual savings)
 friction_cost = calculate_friction_cost()
 moving_cost = moving_costs_psf * target_sf
 total_relocation_penalty = friction_cost + moving_cost + turnover_risk
 
-relocation_costs[0] += total_relocation_penalty
+relocation_costs[0] += total_relocation_penalty  # One-time costs in Year 1
 for i in range(len(relocation_costs)):
-    relocation_costs[i] -= (recruiting_benefit + commute_benefit)
+    relocation_costs[i] -= (recruiting_benefit + commute_benefit)  # Annual benefits
 
 # Calculate NPV for both scenarios
 renewal_npv = calculate_npv(renewal_costs, discount_rate)
@@ -292,61 +299,67 @@ with col3:
 
 st.markdown("---")
 
-# Waterfall Chart - Annual Annuity (Fixed to show true average annual costs)
+# Waterfall Chart - Annual Annuity (Fixed: proper math and total bar)
 st.subheader("💰 Executive Summary: Annual Annuity Waterfall")
 
 # Calculate average annual costs (already includes all strategic drivers and costs)
 avg_stay_cost = sum(renewal_costs) / lease_term
 avg_go_cost = sum(relocation_costs) / lease_term
 
-# Calculate average annual base rent for each scenario (with escalation)
+# FIX 2: Calculate average annual base rent (base_rent is already annual $/PSF, remove * 12)
 stay_base_rent_total = 0
 go_base_rent_total = 0
 for year in range(lease_term):
-    # Stay scenario base rent with escalation
-    stay_rent_this_year = renewal_base_rent * current_sf * 12 * ((1 + escalation_rate/100) ** year)
+    # Stay scenario base rent with escalation (base_rent is annual)
+    stay_rent_this_year = renewal_base_rent * current_sf * ((1 + escalation_rate/100) ** year)
     stay_base_rent_total += stay_rent_this_year
 
-    # Go scenario base rent with escalation
-    go_rent_this_year = new_base_rent * target_sf * 12 * ((1 + escalation_rate/100) ** year)
+    # Go scenario base rent with escalation (base_rent is annual)
+    go_rent_this_year = new_base_rent * target_sf * ((1 + escalation_rate/100) ** year)
     go_base_rent_total += go_rent_this_year
 
 avg_stay_base_rent = stay_base_rent_total / lease_term
 avg_go_base_rent = go_base_rent_total / lease_term
-avg_rent_savings = avg_stay_base_rent - avg_go_base_rent
 
-# Calculate average annual TI benefit
-avg_ti_stay = renewal_ti * current_sf
-avg_ti_go = new_ti * target_sf
-avg_ti_benefit = avg_ti_go - avg_ti_stay
+# FIX 4: Calculate average annual TI benefit (annualized over lease term)
+avg_ti_stay = (renewal_ti * current_sf) / lease_term
+avg_ti_go = (new_ti * target_sf) / lease_term
+
+# Build waterfall showing how we get from Stay to Go
+# The math: avg_stay_cost + deltas = avg_go_cost
+rent_delta = avg_go_base_rent - avg_stay_base_rent  # Positive = Go costs more
+ti_delta = -(avg_ti_go - avg_ti_stay)  # Negative = Go gets more benefit (annualized)
+strategic_benefit_delta = -(recruiting_benefit + commute_benefit)  # Negative = Go gets benefit
+amortized_friction_delta = (friction_cost + moving_cost) / lease_term  # Positive = Go pays more
+# Note: turnover_risk cancels out (both scenarios pay it)
 
 waterfall_values = [
-    avg_stay_cost,
-    -avg_rent_savings,  # Rent savings (annual average with escalation)
-    -avg_ti_benefit,    # Additional TI benefit (annual average)
-    -recruiting_benefit,  # Recruiting velocity (annual)
-    -commute_benefit,     # Commute dividend (annual)
-    (friction_cost + moving_cost + turnover_risk) / lease_term,  # Amortized one-time costs
-    opportunity_cost_annual,  # Opportunity cost (annual)
-    avg_go_cost
+    avg_stay_cost,              # Starting point
+    rent_delta,                 # Rent difference (positive if Go is more expensive)
+    ti_delta,                   # TI benefit difference (negative if Go gets more)
+    strategic_benefit_delta,    # Strategic benefits (negative = savings)
+    amortized_friction_delta,   # One-time costs amortized (positive = cost)
+    avg_go_cost                 # Ending point (TOTAL)
 ]
 
 waterfall_labels = [
     "Stay Cost",
-    "Rent Savings",
-    "TI Benefit",
-    "Recruiting Velocity",
-    "Commute Dividend",
+    "Rent Δ",
+    "TI Benefit Δ",
+    "Strategic Benefits",
     "Amortized Friction",
-    "Opportunity Cost",
     "Go Cost"
 ]
 
 waterfall_text = [f"${v:,.0f}" for v in waterfall_values]
 
+# Set measure types: first is absolute, middle are relative, last is total
+waterfall_measures = ["absolute", "relative", "relative", "relative", "relative", "total"]
+
 fig_waterfall = go.Figure(go.Waterfall(
     x=waterfall_labels,
     y=waterfall_values,
+    measure=waterfall_measures,  # FIX 1: Last bar is now "total" so it anchors to x-axis
     text=waterfall_text,
     textposition="outside",
     connector={"line": {"color": "rgb(63, 63, 63)"}},
@@ -421,11 +434,12 @@ st.markdown("---")
 # Year 1 Breakdown
 st.subheader("💵 Year 1 Cash Outflow Breakdown")
 
-renewal_year1_base = renewal_base_rent * current_sf * (12 - renewal_free_rent)
+# FIX 1 & 2 & 3: Remove opportunity_cost_annual, fix rent multiplier, handle free rent proration
+renewal_year1_base = (renewal_base_rent * current_sf) * (max(0, 12 - renewal_free_rent) / 12)
 renewal_year1_ti = renewal_ti * current_sf
-renewal_year1_strategic = turnover_risk + opportunity_cost_annual
+renewal_year1_strategic = turnover_risk  # FIX 1: Removed opportunity_cost_annual
 
-relocation_year1_base = new_base_rent * target_sf * (12 - new_free_rent)
+relocation_year1_base = (new_base_rent * target_sf) * (max(0, 12 - new_free_rent) / 12)
 relocation_year1_ti = new_ti * target_sf
 relocation_year1_moving = moving_cost
 relocation_year1_friction = friction_cost
@@ -455,12 +469,7 @@ fig_year1.add_trace(go.Bar(
     marker_color='#d62728'
 ))
 
-fig_year1.add_trace(go.Bar(
-    name='Opportunity Cost',
-    x=['Stay (Renewal)', 'Go (Relocate)'],
-    y=[opportunity_cost_annual, 0],
-    marker_color='#9467bd'
-))
+# FIX 1: Removed 'Opportunity Cost' bar (opportunity_cost_annual no longer exists)
 
 fig_year1.add_trace(go.Bar(
     name='TI Allowance (Benefit)',
