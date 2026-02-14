@@ -96,13 +96,15 @@ with st.sidebar:
 
     # Conditional inputs based on mode
     if not industrial_mode:
-        st.subheader("⚡ HHI Team Friction (Office)")
+        st.subheader("⚡ HHI Team Friction (Office)",
+                    help="Quantifies the hidden cost of business disruption. Moving requires packing, IT downtime, and employee acclimation, which temporarily reduces billable hours or overall productivity.")
         productivity_loss_hours = st.slider("Productivity Loss per Employee (Hours)",
                                            min_value=0, max_value=80, value=0, step=1)
         headcount = st.number_input("Headcount", min_value=1, value=1, step=1)
         avg_salary = st.number_input("Average Salary ($)", min_value=0, value=0, step=5000)
     else:
-        st.subheader("🏭 HHI Team Friction (Industrial)")
+        st.subheader("🏭 HHI Team Friction (Industrial)",
+                    help="Accounts for the hard operational downtime and the specialized capital expense of rigging and moving heavy machinery.")
         daily_revenue_loss = st.number_input("Daily Revenue/Production Value ($)",
                                              min_value=0, value=0, step=5000,
                                              help="Average daily revenue or production value")
@@ -117,17 +119,20 @@ with st.sidebar:
         with st.expander("🎯 HHI Team Strategic Drivers", expanded=False):
             st.markdown("**Driver A: Workforce Stability Index**")
             st.markdown("_One-time turnover risk from relocation_")
-            attrition_rate = st.slider("Estimated Attrition Rate (%)", min_value=0.0, max_value=50.0, value=0.0, step=1.0)
+            attrition_rate = st.slider("Estimated Attrition Rate (%)", min_value=0.0, max_value=50.0, value=0.0, step=1.0,
+                                      help="The percentage of staff likely to resign due to the disruption of moving or a worsened commute.")
 
             st.markdown("**Driver B: Recruiting Velocity**")
             st.markdown("_Annual benefit from improved hiring speed_")
             open_roles_per_year = st.number_input("Open Roles Per Year", min_value=0, value=0, step=1)
             revenue_per_employee = st.number_input("Revenue Per Employee ($)", min_value=0, value=0, step=10000)
-            hiring_speed_boost = st.slider("Hiring Speed Boost (Days Faster)", min_value=0, max_value=90, value=0, step=5)
+            hiring_speed_boost = st.slider("Hiring Speed Boost (Days Faster)", min_value=0, max_value=90, value=0, step=5,
+                                          help="The number of days saved in filling open roles because a higher-quality, upgraded workspace is more attractive to top candidates.")
 
             st.markdown("**Driver C: Commute Dividend**")
             st.markdown("_Annual value of recaptured commute time_")
-            commute_time_saved = st.slider("Avg Commute Time Saved (Minutes/Day)", min_value=0, max_value=120, value=0, step=5)
+            commute_time_saved = st.slider("Avg Commute Time Saved (Minutes/Day)", min_value=0, max_value=120, value=0, step=5,
+                                          help="The average round-trip minutes saved per employee, per day, by moving the office closer to your core talent pool's geographic center.")
             st.caption("💡 Hourly wage calculated as: Annual Salary ÷ 2,080 hours")
 
 # Calculate Strategic Drivers
@@ -300,7 +305,8 @@ with col3:
 st.markdown("---")
 
 # Waterfall Chart - Annual Annuity (Fixed: proper math and total bar)
-st.subheader("💰 Executive Summary: Annual Annuity Waterfall")
+st.subheader("💰 Executive Summary: Annual Annuity Waterfall",
+            help="This chart bridges the financial gap between staying and relocating. It amortizes one-time costs (like moving and TI) and strategic benefits over the entire lease term to reveal the true annualized financial impact.")
 
 # Calculate average annual costs (already includes all strategic drivers and costs)
 avg_stay_cost = sum(renewal_costs) / lease_term
