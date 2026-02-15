@@ -309,8 +309,7 @@ with col3:
 st.markdown("---")
 
 # Waterfall Chart - Annual Annuity (Fixed: proper math and total bar)
-st.subheader("💰 Executive Summary: Annual Annuity Waterfall",
-            help="This chart bridges the financial gap between staying and relocating. It amortizes one-time costs (like moving and TI) and strategic benefits over the entire lease term to reveal the true annualized financial impact.")
+
 
 # Calculate average annual costs (already includes all strategic drivers and costs)
 avg_stay_cost = sum(renewal_costs) / lease_term
@@ -362,10 +361,35 @@ waterfall_labels = [
 ]
 
 waterfall_text = [f"${v:,.0f}" for v in waterfall_values]
+# --- Executive Summary Table ---
+st.divider() 
+st.subheader("Executive Summary: Stay vs. Go Comparison")
 
+# Calculations for the metrics
+total_savings_npv = renewal_npv - relocation_npv
+
+c1, c2, c3 = st.columns(3)
+
+with c1:
+    st.metric("Stay (Total NPV Cost)", f"${renewal_npv:,.0f}")
+    st.caption("Present value of all future outflows")
+
+with c2:
+    st.metric("Go (Total NPV Cost)", f"${relocation_npv:,.0f}")
+    st.caption("Present value of all future outflows")
+
+with c3:
+    # Logic to show if Moving saves money or costs money
+    if total_savings_npv > 0:
+        st.metric("Decision Value", f"${abs(total_savings_npv):,.0f}", delta="Savings (Moving)", delta_color="normal")
+    else:
+        st.metric("Decision Value", f"${abs(total_savings_npv):,.0f}", delta="Extra Cost (Moving)", delta_color="inverse")
+
+st.divider()
 # Set measure types: first is absolute, middle are relative, last is total
 waterfall_measures = ["absolute", "relative", "relative", "relative", "relative", "total"]
-
+st.subheader("💰 Executive Summary: Annual Annuity Waterfall",
+            help="This chart bridges the financial gap between staying and relocating. It amortizes one-time costs (like moving and TI) and strategic benefits over the entire lease term to reveal the true annualized financial impact.")
 fig_waterfall = go.Figure(go.Waterfall(
     x=waterfall_labels,
     y=waterfall_values,
