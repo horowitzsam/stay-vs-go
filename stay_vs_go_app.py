@@ -1,4 +1,3 @@
-import os
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
@@ -12,12 +11,9 @@ if not st.session_state.authenticated:
     st.title("🔐 HHI Strategic Decision Engine")
     st.markdown("### Access Required")
     password_input = st.text_input("Enter Password", type="password")
-    
+
     if st.button("Login"):
-        # Checks DigitalOcean Env Var first, then falls back to hardcoded default
-        correct_password = os.environ.get("password") or st.secrets.get("password", "HHI2026")
-        
-        if password_input == correct_password:
+        if password_input == st.secrets.get("password", "HHI2026"):
             st.session_state.authenticated = True
             st.rerun()
         else:
@@ -94,7 +90,7 @@ with st.sidebar:
     new_base_rent = st.number_input("New Base Rent ($/PSF)", min_value=0.0, value=30.0, step=0.50)
     new_free_rent = st.number_input("New Free Rent (Months)", min_value=0, max_value=24, value=6)
     new_ti = st.number_input("New TI Allowance ($/PSF)", min_value=0.0, value=60.0, step=1.0)
-    moving_costs_psf = st.number_input("Construction/Moving/FF&E Costs ($/PSF)", min_value=0.0, value=25.0, step=1.0)
+    moving_costs_psf = st.number_input("Moving/FF&E Costs ($/PSF)", min_value=0.0, value=25.0, step=1.0)
 
     st.markdown("---")
 
@@ -309,7 +305,8 @@ with col3:
 st.markdown("---")
 
 # Waterfall Chart - Annual Annuity (Fixed: proper math and total bar)
-
+st.subheader("💰 Executive Summary: Annual Annuity Waterfall",
+            help="This chart bridges the financial gap between staying and relocating. It amortizes one-time costs (like moving and TI) and strategic benefits over the entire lease term to reveal the true annualized financial impact.")
 
 # Calculate average annual costs (already includes all strategic drivers and costs)
 avg_stay_cost = sum(renewal_costs) / lease_term
@@ -361,35 +358,10 @@ waterfall_labels = [
 ]
 
 waterfall_text = [f"${v:,.0f}" for v in waterfall_values]
-# --- Executive Summary Table ---
-st.divider() 
-st.subheader("Executive Summary: Stay vs. Go Comparison")
 
-# Calculations for the metrics
-total_savings_npv = renewal_npv - relocation_npv
-
-c1, c2, c3 = st.columns(3)
-
-with c1:
-    st.metric("Stay (Total NPV Cost)", f"${renewal_npv:,.0f}")
-    st.caption("Present value of all future outflows")
-
-with c2:
-    st.metric("Go (Total NPV Cost)", f"${relocation_npv:,.0f}")
-    st.caption("Present value of all future outflows")
-
-with c3:
-    # Logic to show if Moving saves money or costs money
-    if total_savings_npv > 0:
-        st.metric("Decision Value", f"${abs(total_savings_npv):,.0f}", delta="Savings (Moving)", delta_color="normal")
-    else:
-        st.metric("Decision Value", f"${abs(total_savings_npv):,.0f}", delta="Extra Cost (Moving)", delta_color="inverse")
-
-st.divider()
 # Set measure types: first is absolute, middle are relative, last is total
 waterfall_measures = ["absolute", "relative", "relative", "relative", "relative", "total"]
-st.subheader("💰 Executive Summary: Annual Annuity Waterfall",
-            help="This chart bridges the financial gap between staying and relocating. It amortizes one-time costs (like moving and TI) and strategic benefits over the entire lease term to reveal the true annualized financial impact.")
+
 fig_waterfall = go.Figure(go.Waterfall(
     x=waterfall_labels,
     y=waterfall_values,
@@ -547,26 +519,19 @@ df_comparison = pd.DataFrame({
 
 st.dataframe(df_comparison, use_container_width=True, hide_index=True)
 
-# Footer
-st.markdown("---")
+# HHI Team Contact Footer
 st.markdown("""
-<div style='text-align: center; color: #666; padding: 2rem;'>
-    <p><strong>HHI Strategic Decision Engine</strong> | Commercial Real Estate Decision Intelligence</p>
-    <p style='font-size: 0.9em;'>Quantifying the strategic and operational impact of real estate decisions</p>
-</div>
-""", unsafe_allow_html=True)
-
-# Disclaimer
-st.markdown("---")
-st.markdown("""
-<div style='text-align: center; color: #888; padding: 1rem; font-size: 0.85em; max-width: 800px; margin: 0 auto;'>
-    <p><strong>⚠️ Disclaimer</strong></p>
-    <p style='line-height: 1.6;'>
-    This tool is provided for informational and analytical purposes only. The projections, calculations, and insights
-    generated are based on user-provided inputs and assumptions, and should be used as guidance in the decision-making
-    process. This analysis does not constitute professional real estate, financial, legal, or tax advice.
-    Users should consult with qualified professionals and conduct their own due diligence before making any
-    real estate decisions. HHI and the tool creators assume no liability for decisions made based on this analysis.
-    </p>
-</div>
+    <hr style="border-top: 1px solid #e2e8f0; margin-top: 60px; margin-bottom: 30px;">
+    <div style="text-align: center; padding: 24px; font-family: sans-serif; color: #1e293b; background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; max-width: 800px; margin: 0 auto;">
+        <h3 style="margin-bottom: 4px; font-size: 18px; font-weight: bold; color: #1e293b;">Sam Horowitz & The HHI Team</h3>
+        <p style="font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold; margin-bottom: 16px;">Colliers International</p>
+        <p style="font-size: 14px; color: #64748b; font-style: italic; margin-bottom: 24px;">Need a custom financial model or alternative space analysis?</p>
+        <div style="margin-bottom: 16px;">
+            <a href="mailto:Sam.Horowitz@colliers.com?subject=Re: Stay vs. Go Analysis" style="display: inline-block; padding: 10px 24px; background-color: #1e293b; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: bold; border-radius: 8px; margin-right: 12px; transition: background-color 0.2s;">Let's Talk</a>
+            <a href="https://www.colliers.com/en-us/experts/sam-horowitz" target="_blank" style="display: inline-block; padding: 10px 24px; background-color: #ffffff; color: #334155; text-decoration: none; font-size: 14px; font-weight: bold; border-radius: 8px; border: 1px solid #cbd5e1; transition: background-color 0.2s;">View My Profile</a>
+        </div>
+        <p style="margin-top: 24px; font-size: 10px; color: #94a3b8; line-height: 1.6; text-align: justify;">
+            <strong>Disclaimer:</strong> The financial modeling, NPV calculations, and comparative data provided by this logic engine are for informational and planning purposes only. While the information has been obtained from sources deemed reliable, Sam Horowitz, The HHI Team, and Colliers International make no guarantees, warranties, or representations, express or implied, regarding the accuracy, completeness, or current nature of the data. Users should conduct their own independent investigation and due diligence before making real estate decisions.
+        </p>
+    </div>
 """, unsafe_allow_html=True)
