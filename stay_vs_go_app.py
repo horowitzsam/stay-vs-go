@@ -13,7 +13,12 @@ if not st.session_state.authenticated:
     password_input = st.text_input("Enter Password", type="password")
 
     if st.button("Login"):
-        if password_input == st.secrets.get("password", "HHI2026"):
+        try:
+            correct_password = st.secrets["password"]
+        except Exception:
+            correct_password = "HHI2026"
+
+        if password_input == correct_password:
             st.session_state.authenticated = True
             st.rerun()
         else:
